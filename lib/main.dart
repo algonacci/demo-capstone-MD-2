@@ -19,6 +19,8 @@ class _MyAppState extends State<MyApp> {
   String _responseMessage = '';
   bool? _isVerified;
   int? _responseStatusCode;
+  String? _prediction;
+  List<dynamic>? _predictionData;
 
   final picker = ImagePicker();
 
@@ -37,8 +39,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _uploadImages() async {
-    const endpoint = 'https://demo-capstone-ml-2-muf7kziviq-as.a.run.app';
-    final uri = Uri.parse('${endpoint}/verify');
+    const endpoint = 'http://192.168.0.109:5050';
+    final uri = Uri.parse('$endpoint/verify');
     final request = http.MultipartRequest('POST', uri);
 
     // Add profile picture to the request
@@ -71,11 +73,29 @@ class _MyAppState extends State<MyApp> {
         final data = jsonResponse['data'];
         _responseMessage = jsonResponse['message'];
         _isVerified = jsonResponse['data']['verified'];
-        // Handle data as needed (e.g., access 'data' to get detector_backend, distance, etc.)
+        _prediction = jsonResponse['prediction'];
+
+        // Fetch data based on prediction value
+        _fetchDataBasedOnPrediction(_prediction);
       } else {
         _responseMessage = 'Failed to upload images';
       }
     });
+  }
+
+  Future<void> _fetchDataBasedOnPrediction(String? prediction) async {
+    if (prediction != null) {
+      final endpoint2 = 'https://b306-103-163-240-34.ngrok-free.app/artist';
+      final response = await http.get(Uri.parse('$endpoint2?name=$prediction'));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        print('====================');
+        setState(() {
+          _predictionData = jsonResponse;
+        });
+      }
+    }
   }
 
   @override
@@ -117,19 +137,31 @@ class _MyAppState extends State<MyApp> {
                   Text('Response Status Code: $_responseStatusCode'),
                   Text(
                     'Response Message: $_responseMessage',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Text(
                     'Verified Status: $_isVerified',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                     ),
                   ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  if (_predictionData != null)
+                    Column(
+                      children: _predictionData!.map((data) {
+                        return ListTile(
+                          title: Text('Name: ${data['name']}'),
+                          subtitle: Text('Age: ${data['umur']}'),
+                        );
+                      }).toList(),
+                    )
                 ],
               ),
             ],
